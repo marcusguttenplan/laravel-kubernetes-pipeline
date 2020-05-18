@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waymo-digital-events-app-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: gcr.io/waymo-digital-events/app
+        imagePullPolicy: Always
+        livenessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          tcpSocket:
+            port: 80
+          timeoutSeconds: 30
+        ports:
+          - containerPort: 80
+        readinessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          tcpSocket:
+            port: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 400M
+          requests:
+            cpu: 100m
+            memory: 200M
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-secret
+              key: username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-secret
+              key: password
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-secret
+              key: database
+      - name: cloud-sql-proxy
+        # It is recommended to use the latest version of the Cloud SQL proxy
+        # Make sure to update on a regular schedule!
+        image: gcr.io/cloudsql-docker/gce-proxy:1.17
+        command:
+          - "/cloud_sql_proxy"
+
+          # If connecting from a VPC-native GKE cluster, you can use the
+          # following flag to have the proxy connect over private IP
+          # - "-ip_address_types=PRIVATE"
+
+          # Replace DB_PORT with the port the proxy should listen on
+          # Defaults: MySQL: 3306, Postgres: 5432, SQLServer: 1433
+          - "-instances=waymo-digital-events:us-central1:waymo-v2=tcp:3306"
+
+          # This flag specifies where the service account key can be found
+          - "-credential_file=/secrets/service_account.json"
+        securityContext:
+          # The default Cloud SQL proxy image is based on distroless, which
+          # runs as the "nonroot" user (uid: 65534) by default.
+          runAsNonRoot: true
+        volumeMounts:
+        - name: db-service-account-volume
+          mountPath: /secrets/
+          readOnly: true
+        - mountPath: /var/www
+          name: codebase
+      volumes:
+      - name: db-service-account-volume
+        secret:
+          secretName: db-service-account
+      - emptyDir: {}
+        name: codebase

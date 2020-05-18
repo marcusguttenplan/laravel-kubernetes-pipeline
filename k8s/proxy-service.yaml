@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    service: app-loadbalancer
+    app: app
+  name: app-loadbalancer
+spec:
+  ports:
+  - name: "80"
+    port: 80
+    targetPort: 80
+  selector:
+    service: app-loadbalancer
+    app: app
+  type: LoadBalancer
+status:
+  loadBalancer: {}

@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: app
+  name: app
+spec:
+  minReadySeconds: 5
+  replicas: 5
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: app
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      # affinity:
+      #   podAntiAffinity:
+      #     preferredDuringSchedulingIgnoredDuringExecution:
+      #       - podAffinityTerm:
+      #           labelSelector:
+      #             matchExpressions:
+      #               - key: app
+      #                 operator: In
+      #                 values:
+      #                   - app
+      #           topologyKey: kubernetes.io/hostname
+      #         weight: 100
+      # initContainers:
+      #   - args:
+      #       - /bin/bash
+      #       - -c
+      #       - (php artisan migrate || true) && (php artisan config:cache || true) && (php
+      #         artisan route:cache || true) && (cp -rp /var/www/html /codebase)
+      #     # envFrom:
+      #     #   - configMapRef:
+      #     #       name: app-config
+      #     image: gcr.io/waymo-digital-events/app
+      #     imagePullPolicy: Always
+      #     name: app
+      #     volumeMounts:
+      #       - mountPath: /codebase
+      #         name: codebase
+
+      containers:
+        - name: app
+          image: gcr.io/waymo-digital-events/app:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            tcpSocket:
+              port: 80
+            timeoutSeconds: 30
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            tcpSocket:
+              port: 80
+          resources:
+            limits:
+              cpu: 200m
+              memory: 400M
+            requests:
+              cpu: 100m
+              memory: 200M
+          envFrom:
+            - configMapRef:
+                name: app-config
+          env:
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: cloudsql-secret
+                key: db_user
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: cloudsql-secret
+                key: db_password
+          - name: DB_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: cloudsql-secret
+                key: db_name
+          volumeMounts:
+            - mountPath: /cloudsql
+              name: cloudsql
+          #   - mountPath: /var/www
+          #     name: codebase
+        - name: cloud-sql-proxy
+          image: gcr.io/cloudsql-docker/gce-proxy:1.17
+          command:
+            - "/cloud_sql_proxy"
+            - "-instances=waymo-digital-events:us-central1:waymo-v2=tcp:0.0.0.0:3306"
+            # - "-dir=/cloudsql"
+            - "-credential_file=/secrets/service_account.json"
+          # securityContext:
+          #   runAsNonRoot: true
+          volumeMounts:
+          - name: db-service-account-volume
+            mountPath: /secrets/
+            readOnly: true
+          - mountPath: /cloudsql
+            name: cloudsql
+      volumes:
+        # - emptyDir: {}
+        #   name: codebase
+        - emptyDir: {}
+          name: cloudsql
+        - name: db-service-account-volume
+          secret:
+            secretName: db-service-account

@@ -1,0 +1,25 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    service: app-loadbalancer
+  name: app-loadbalancer
+spec:
+  replicas: 3
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: app-loadbalancer
+    spec:
+      containers:
+      - image: app-loadbalancer
+        name: app-loadbalancer
+        ports:
+        - containerPort: 9090
+        resources: {}
+        tty: true
+      restartPolicy: Always
+status: {}
