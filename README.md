@@ -92,7 +92,7 @@ gcloud container clusters create waymo-cluster --num-nodes=4 --enable-autoscalin
 
 Create kubernetes secret for db vals:
 ```
-kubectl create secret generic cloudsql-secret --from-literal=db_user=root --from-literal=db_password=S0itg0es1 --from-literal=db_name=laravel
+kubectl create secret generic cloudsql-secret --from-literal=db_user=root --from-literal=db_password=<password> --from-literal=db_name=laravel
 ```
 
 Create kubernetes secret for service account:

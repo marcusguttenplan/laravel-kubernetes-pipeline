@@ -15,7 +15,7 @@ spec:
         service: app-loadbalancer
     spec:
       containers:
-      - image: app-loadbalancer
+      - image:  gcr.io/waymo-digital-events/app-loadbalancer:latest
         name: app-loadbalancer
         ports:
         - containerPort: 9090
